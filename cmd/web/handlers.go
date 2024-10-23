@@ -3,12 +3,11 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"strconv"
 )
 
-func home(writer http.ResponseWriter, request *http.Request) {
+func (app *application) home(writer http.ResponseWriter, request *http.Request) {
 	if request.URL.Path != "/" {
 		http.NotFound(writer, request)
 		return
@@ -22,31 +21,30 @@ func home(writer http.ResponseWriter, request *http.Request) {
 
 	ts, err := template.ParseFiles(files...)
 	if err != nil {
-		log.Print(err.Error())
+		app.errorLog.Print(err.Error())
 		http.Error(writer, "Internal Server Error", 500)
 		return
 	}
 
 	err = ts.ExecuteTemplate(writer, "base", nil)
 	if err != nil {
-		log.Print(err.Error())
+		app.errorLog.Print(err.Error())
 		http.Error(writer, "Internal Server Error", 500)
 	}
-
-	writer.Write([]byte("Hello from snippetbox"))
 }
 
-func snippetView(writer http.ResponseWriter, request *http.Request) {
+func (app *application) snippetView(writer http.ResponseWriter, request *http.Request) {
 	id, err := strconv.Atoi(request.URL.Query().Get("id"))
 	if err != nil || id < 1 {
 		http.NotFound(writer, request)
+		return
 	}
 	fmt.Fprintf(writer, "Display specific snippet with ID %d...", id)
 }
 
-func snippetCreate(writer http.ResponseWriter, request *http.Request) {
+func (app *application) snippetCreate(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
-		writer.WriteHeader(405)
+		writer.Header().Set("Allow", http.MethodPost)
 		http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
