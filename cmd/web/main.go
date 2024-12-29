@@ -7,22 +7,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"snippetbox.jonnevuorela.com/internal/models"
 )
 
 type application struct {
 	errorLog *log.Logger
 	infoLog  *log.Logger
-}
-
-func openDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return nil, err
-	}
-	if err = db.Ping(); err != nil {
-		return nil, err
-	}
-	return db, nil
+	snippets *models.SnippetModel
 }
 
 func main() {
@@ -46,6 +38,7 @@ func main() {
 	app := &application{
 		errorLog: errorLog,
 		infoLog:  infoLog,
+		snippets: &models.SnippetModel{DB: db},
 	}
 	srv := &http.Server{
 		Addr:     *addr,
@@ -57,4 +50,15 @@ func main() {
 	err = srv.ListenAndServe()
 	errorLog.Fatal(err)
 
+}
+
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+	if err = db.Ping(); err != nil {
+		return nil, err
+	}
+	return db, nil
 }
