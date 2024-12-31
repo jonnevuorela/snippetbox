@@ -7,14 +7,11 @@ import (
 	"strconv"
 
 	"snippetbox.jonnevuorela.com/internal/models"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 func (app *application) home(writer http.ResponseWriter, request *http.Request) {
-	if request.URL.Path != "/" {
-		app.notFound(writer)
-		return
-	}
-
 	snippets, err := app.snippets.Latest()
 	if err != nil {
 		app.serverError(writer, err)
@@ -28,7 +25,10 @@ func (app *application) home(writer http.ResponseWriter, request *http.Request) 
 }
 
 func (app *application) snippetView(writer http.ResponseWriter, request *http.Request) {
-	id, err := strconv.Atoi(request.URL.Query().Get("id"))
+
+	params := httprouter.ParamsFromContext(request.Context())
+
+	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil || id < 1 {
 		app.notFound(writer)
 		return
@@ -50,13 +50,11 @@ func (app *application) snippetView(writer http.ResponseWriter, request *http.Re
 
 }
 
-func (app *application) snippetCreate(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		writer.Header().Set("Allow", http.MethodPost)
-		app.clientError(writer, http.StatusMethodNotAllowed)
-		return
-	}
+func (app *application) snippetCreate(writer http.ResponseWriter, r *http.Request) {
+	writer.Write([]byte("Display the form for creating a new snippet"))
+}
 
+func (app *application) snippetCreatePost(writer http.ResponseWriter, request *http.Request) {
 	title := "O snail"
 	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
 	expires := 7
@@ -67,7 +65,7 @@ func (app *application) snippetCreate(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	http.Redirect(writer, request, fmt.Sprintf("/snippet/view?id=%d", id), http.StatusSeeOther)
+	http.Redirect(writer, request, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
 }
 
 func downloadHandler(writer http.ResponseWriter, request *http.Request) {

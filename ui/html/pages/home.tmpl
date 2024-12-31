@@ -1,4 +1,5 @@
 {{define "title"}}Home{{end}}
+
    {{define "main"}}
       <h2>Latest Snippets</h2>
       {{if .Snippets}}
@@ -10,7 +11,7 @@
          </tr>
          {{range .Snippets}}
          <tr>
-            <td><a href='/snippet/view?id={{.Id}}'>{{.Title}}</a></td>
+            <td><a href='/snippet/view/{{.Id}}'>{{.Title}}</a></td>
             <td>{{humanDate .Created}}</td>
             <td>#{{.Id}}</td>
          </tr>
