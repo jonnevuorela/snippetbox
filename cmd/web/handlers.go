@@ -21,9 +21,10 @@ func (app *application) home(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 
-	app.render(writer, http.StatusOK, "home.tmpl", &templateData{
-		Snippets: snippets,
-	})
+	data := app.newTemplateData(request)
+	data.Snippets = snippets
+
+	app.render(writer, http.StatusOK, "home.tmpl", data)
 }
 
 func (app *application) snippetView(writer http.ResponseWriter, request *http.Request) {
@@ -42,9 +43,10 @@ func (app *application) snippetView(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	app.render(writer, http.StatusOK, "view.tmpl", &templateData{
-		Snippet: snippet,
-	})
+	data := app.newTemplateData(request)
+	data.Snippet = snippet
+
+	app.render(writer, http.StatusOK, "view.tmpl", data)
 
 }
 
