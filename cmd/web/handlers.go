@@ -51,13 +51,26 @@ func (app *application) snippetView(writer http.ResponseWriter, request *http.Re
 }
 
 func (app *application) snippetCreate(writer http.ResponseWriter, r *http.Request) {
-	writer.Write([]byte("Display the form for creating a new snippet"))
+	data := app.newTemplateData(r)
+
+	app.render(writer, http.StatusOK, "create.tmpl", data)
 }
 
 func (app *application) snippetCreatePost(writer http.ResponseWriter, request *http.Request) {
-	title := "O snail"
-	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
-	expires := 7
+	err := request.ParseForm()
+	if err != nil {
+		app.clientError(writer, http.StatusBadRequest)
+		return
+	}
+
+	title := request.PostForm.Get("title")
+	content := request.PostForm.Get("content")
+
+	expires, err := strconv.Atoi(request.PostForm.Get("expires"))
+	if err != nil {
+		app.clientError(writer, http.StatusBadRequest)
+		return
+	}
 
 	id, err := app.snippets.Insert(title, content, expires)
 	if err != nil {
