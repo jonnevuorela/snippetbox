@@ -13,6 +13,13 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+type snippetCreateForm struct {
+	Title       string
+	Content     string
+	Expires     int
+	FieldErrors map[string]string
+}
+
 func (app *application) home(writer http.ResponseWriter, request *http.Request) {
 	snippets, err := app.snippets.Latest()
 	if err != nil {
@@ -55,6 +62,9 @@ func (app *application) snippetView(writer http.ResponseWriter, request *http.Re
 func (app *application) snippetCreate(writer http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 
+	data.Form = snippetCreateForm{
+		Expires: 365,
+	}
 	app.render(writer, http.StatusOK, "create.tmpl", data)
 }
 
@@ -65,37 +75,41 @@ func (app *application) snippetCreatePost(writer http.ResponseWriter, request *h
 		return
 	}
 
-	title := request.PostForm.Get("title")
-	content := request.PostForm.Get("content")
-
 	expires, err := strconv.Atoi(request.PostForm.Get("expires"))
 	if err != nil {
 		app.clientError(writer, http.StatusBadRequest)
 		return
 	}
 
-	fieldErrors := make(map[string]string)
-
-	if strings.TrimSpace(title) == "" {
-		fieldErrors["title"] = "This field cannot be blank"
-	} else if utf8.RuneCountInString(title) > 100 {
-		fieldErrors["title"] = "This field cannot be more than 100 characters long"
+	form := snippetCreateForm{
+		Title:       request.PostForm.Get("title"),
+		Content:     request.PostForm.Get("content"),
+		Expires:     expires,
+		FieldErrors: map[string]string{},
 	}
 
-	if strings.TrimSpace(content) == "" {
-		fieldErrors["content"] = "This field cannot be blank"
+	if strings.TrimSpace(form.Title) == "" {
+		form.FieldErrors["title"] = "This field cannot be blank"
+	} else if utf8.RuneCountInString(form.Title) > 100 {
+		form.FieldErrors["title"] = "This field cannot be more than 100 characters long"
 	}
 
-	if expires != 1 && expires != 7 && expires != 365 {
-		fieldErrors["expire"] = "This field must equal 1, 7 or 365"
+	if strings.TrimSpace(form.Content) == "" {
+		form.FieldErrors["content"] = "This field cannot be blank"
 	}
 
-	if len(fieldErrors) > 0 {
-		fmt.Fprint(writer, fieldErrors)
+	if form.Expires != 1 && form.Expires != 7 && form.Expires != 365 {
+		form.FieldErrors["expire"] = "This field must equal 1, 7 or 365"
+	}
+
+	if len(form.FieldErrors) > 0 {
+		data := app.newTemplateData(request)
+		data.Form = form
+		app.render(writer, http.StatusUnprocessableEntity, "create.tmpl", data)
 		return
 	}
 
-	id, err := app.snippets.Insert(title, content, expires)
+	id, err := app.snippets.Insert(form.Title, form.Content, form.Expires)
 	if err != nil {
 		app.serverError(writer, err)
 		return
