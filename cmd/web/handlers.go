@@ -13,10 +13,10 @@ import (
 )
 
 type snippetCreateForm struct {
-	Title               string `form: "title`
-	Content             string `form: "content"`
-	Expires             int    `form: "expires`
-	validator.Validator `form: "-"`
+	Title               string `form:"title"`
+	Content             string `form:"content"`
+	Expires             int    `form:"expires"`
+	validator.Validator `form:"-"`
 }
 
 func (app *application) home(writer http.ResponseWriter, request *http.Request) {
@@ -51,8 +51,12 @@ func (app *application) snippetView(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
+	flash := app.sessionManager.PopString(request.Context(), "flash")
+
 	data := app.newTemplateData(request)
 	data.Snippet = snippet
+
+	data.Flash = flash
 
 	app.render(writer, http.StatusOK, "view.tmpl", data)
 
@@ -93,6 +97,8 @@ func (app *application) snippetCreatePost(writer http.ResponseWriter, request *h
 		app.serverError(writer, err)
 		return
 	}
+
+	app.sessionManager.Put(request.Context(), "flash", "Snippet successfully created!")
 
 	http.Redirect(writer, request, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
 }
