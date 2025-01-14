@@ -19,6 +19,13 @@ type snippetCreateForm struct {
 	validator.Validator `form:"-"`
 }
 
+type userSignupForm struct {
+	Name                string `form:"name"`
+	Email               string `form:"email"`
+	Password            string `form:"password"`
+	validator.Validator `form:"-"`
+}
+
 func (app *application) home(writer http.ResponseWriter, request *http.Request) {
 	snippets, err := app.snippets.Latest()
 	if err != nil {
@@ -97,6 +104,63 @@ func (app *application) snippetCreatePost(writer http.ResponseWriter, request *h
 	app.sessionManager.Put(request.Context(), "flash", "Snippet successfully created!")
 
 	http.Redirect(writer, request, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
+}
+
+func (app *application) userSignup(writer http.ResponseWriter, request *http.Request) {
+	data := app.newTemplateData(request)
+	data.Form = userSignupForm{}
+	app.render(writer, http.StatusOK, "signup.tmpl", data)
+}
+
+func (app *application) userSignupPost(writer http.ResponseWriter, request *http.Request) {
+	var form userSignupForm
+
+	err := app.decodePostForm(request, &form)
+	if err != nil {
+		app.clientError(writer, http.StatusBadRequest)
+		return
+	}
+	form.CheckField(validator.NotBlank(form.Name), "name", "This field cannot be blank")
+	form.CheckField(validator.NotBlank(form.Email), "email", "This field cannot be blank")
+	form.CheckField(validator.Matches(form.Email, validator.EmailRX), "email", "This field must be a valid email address")
+	form.CheckField(validator.NotBlank(form.Password), "password", "This field cannot be blank")
+	form.CheckField(validator.MinChars(form.Password, 8), "password", "This field must be at least 8 characters long")
+
+	if !form.Valid() {
+		data := app.newTemplateData(request)
+		data.Form = form
+		app.render(writer, http.StatusUnprocessableEntity, "signup.tmpl", data)
+		return
+	}
+
+	err = app.users.Insert(form.Name, form.Email, form.Password)
+	if err != nil {
+		if errors.Is(err, models.ErrDuplicateEmail) {
+			form.AddFieldError("email", "Email address is already in use")
+			data := app.newTemplateData(request)
+			data.Form = form
+			app.render(writer, http.StatusUnprocessableEntity, "signup.tmpl", data)
+		} else {
+			app.serverError(writer, err)
+		}
+		return
+	}
+
+	app.sessionManager.Put(request.Context(), "flash", "Your signup was successful. Plese log in.")
+
+	http.Redirect(writer, request, "/user/login", http.StatusSeeOther)
+}
+
+func (app *application) userLogin(writer http.ResponseWriter, request *http.Request) {
+	fmt.Fprintln(writer, "Display a form for logging in a user...")
+}
+
+func (app *application) userLoginPost(writer http.ResponseWriter, request *http.Request) {
+	fmt.Fprintln(writer, "Authenticate and login the user...")
+}
+
+func (app *application) userLogoutPost(writer http.ResponseWriter, request *http.Request) {
+	fmt.Fprintln(writer, "Logout the user...")
 }
 
 func downloadHandler(writer http.ResponseWriter, request *http.Request) {
