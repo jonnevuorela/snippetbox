@@ -26,6 +26,12 @@ type userSignupForm struct {
 	validator.Validator `form:"-"`
 }
 
+type userLoginForm struct {
+	Email               string `form:"email"`
+	Password            string `form:"password"`
+	validator.Validator `form:"-"`
+}
+
 func (app *application) home(writer http.ResponseWriter, request *http.Request) {
 	snippets, err := app.snippets.Latest()
 	if err != nil {
@@ -152,11 +158,54 @@ func (app *application) userSignupPost(writer http.ResponseWriter, request *http
 }
 
 func (app *application) userLogin(writer http.ResponseWriter, request *http.Request) {
-	fmt.Fprintln(writer, "Display a form for logging in a user...")
+	data := app.newTemplateData(request)
+	data.Form = userLoginForm{}
+	app.render(writer, http.StatusOK, "login.tmpl", data)
 }
 
 func (app *application) userLoginPost(writer http.ResponseWriter, request *http.Request) {
-	fmt.Fprintln(writer, "Authenticate and login the user...")
+	var form userLoginForm
+
+	err := app.decodePostForm(request, &form)
+	if err != nil {
+		app.clientError(writer, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.Email), "email", "This field cannot be blank")
+	form.CheckField(validator.Matches(form.Email, validator.EmailRX), "email", "This field must be a valid email address")
+	form.CheckField(validator.NotBlank(form.Password), "password", "This field cannot be blank")
+
+	if !form.Valid() {
+		data := app.newTemplateData(request)
+		data.Form = form
+		app.render(writer, http.StatusUnprocessableEntity, "login.tmpl", data)
+		return
+	}
+
+	id, err := app.users.Authenticate(form.Email, form.Password)
+	if err != nil {
+		if errors.Is(err, models.ErrInvalidCredentials) {
+			form.AddNonFieldError("Email or password is incorrect")
+
+			data := app.newTemplateData(request)
+			data.Form = form
+			app.render(writer, http.StatusUnprocessableEntity, "login.tmpl", data)
+		} else {
+			app.serverError(writer, err)
+		}
+		return
+	}
+
+	err = app.sessionManager.RenewToken(request.Context())
+	if err != nil {
+		app.serverError(writer, err)
+		return
+	}
+
+	app.sessionManager.Put(request.Context(), "authenticated%UserID", id)
+
+	http.Redirect(writer, request, "/snippet/create", http.StatusSeeOther)
 }
 
 func (app *application) userLogoutPost(writer http.ResponseWriter, request *http.Request) {
