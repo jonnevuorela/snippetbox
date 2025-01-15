@@ -203,13 +203,23 @@ func (app *application) userLoginPost(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	app.sessionManager.Put(request.Context(), "authenticated%UserID", id)
+	app.sessionManager.Put(request.Context(), "authenticated%UserId", id)
 
 	http.Redirect(writer, request, "/snippet/create", http.StatusSeeOther)
 }
 
 func (app *application) userLogoutPost(writer http.ResponseWriter, request *http.Request) {
-	fmt.Fprintln(writer, "Logout the user...")
+	err := app.sessionManager.RenewToken(request.Context())
+	if err != nil {
+		app.serverError(writer, err)
+		return
+	}
+
+	app.sessionManager.Remove(request.Context(), "authenticated%UserId")
+
+	app.sessionManager.Put(request.Context(), "flash", "You've been logged out successfully!")
+
+	http.Redirect(writer, request, "/", http.StatusSeeOther)
 }
 
 func downloadHandler(writer http.ResponseWriter, request *http.Request) {
