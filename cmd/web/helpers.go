@@ -13,7 +13,11 @@ import (
 )
 
 func (app *application) isAuthenticated(request *http.Request) bool {
-	return app.sessionManager.Exists(request.Context(), "authenticated%UserId")
+	isAuthenticated, ok := request.Context().Value(isAuthenticatedContextKey).(bool)
+	if !ok {
+		return false
+	}
+	return isAuthenticated
 }
 
 func (app *application) decodePostForm(r *http.Request, dst any) error {
