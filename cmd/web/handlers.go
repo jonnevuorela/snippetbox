@@ -222,6 +222,10 @@ func (app *application) userLogoutPost(writer http.ResponseWriter, request *http
 	http.Redirect(writer, request, "/", http.StatusSeeOther)
 }
 
+func ping(writer http.ResponseWriter, request *http.Request) {
+	writer.Write([]byte("OK"))
+}
+
 func downloadHandler(writer http.ResponseWriter, request *http.Request) {
 	http.ServeFile(writer, request, "./ui/static/file.zip")
 }

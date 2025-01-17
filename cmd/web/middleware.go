@@ -10,7 +10,7 @@ import (
 
 func (app *application) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := app.sessionManager.GetInt(r.Context(), "authenticated%UserId")
+		id := app.sessionManager.GetInt(r.Context(), "authenticatedUserId")
 		if id == 0 {
 			next.ServeHTTP(w, r)
 			return
@@ -54,9 +54,9 @@ func (app *application) requireAuthentication(next http.Handler) http.Handler {
 	})
 }
 
-func secureHeader(next http.Handler) http.Handler {
+func secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' fonts-googleapis.com; font-src fonts.gstatic.com")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com")
 		w.Header().Set("Referrer-Policy", "origin-when-cross-origin")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "deny")
